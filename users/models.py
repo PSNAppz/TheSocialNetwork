@@ -77,3 +77,8 @@ class FriendRequest(models.Model):
     )
     status = models.CharField(max_length=8, choices=STATUS_CHOICES, default="sent")
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.sender == self.receiver:
+            raise ValueError("Sender and receiver must be different.")
+        super().save(*args, **kwargs)

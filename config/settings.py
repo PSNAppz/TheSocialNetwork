@@ -54,9 +54,6 @@ env = environ.Env(
     CELERY_BROKER_URL=(str, ""),
     CELERY_RESULT_BACKEND=(str, ""),
     FCM_SERVER_KEY=(str, ""),
-    SUPABASE_JWT_SECRET=(str, ""),
-    SUPABASE_URL=(str, ""),
-    SUPABASE_SERVICE_ROLE_KEY=(str, ""),
 )
 
 # Read the .env file
@@ -74,7 +71,7 @@ SECRET_KEY = "dmi7tj+skkz0r+^n#slnezk46^p92225n2vci94*lfc7oin1vu"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]  # TODO: change this to production domain
+ALLOWED_HOSTS = ["*"]  # TODO: change this before going to production
 
 # Application definition
 
@@ -108,7 +105,6 @@ INSTALLED_APPS = [
     "import_export_celery",
     # local
     "users.apps.UsersConfig",
-    "supabase_app.apps.SupabaseConfig",
 ]
 
 MIDDLEWARE = [
@@ -166,7 +162,7 @@ FCM_DJANGO_SETTINGS = {
 #         'HOST': env('DB_HOST'),
 #         'PORT': '',
 #     },
-#     #TODO: Update this if required
+#     #TODO: Use this if required
 #     'write': {
 #         'ENGINE': 'django.db.backends.postgresql_psycopg2',
 #         'NAME': env('DB_NAME'),
@@ -242,22 +238,18 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "supabase_app.authentication.SupabaseAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.BasicAuthentication",
         "rest_framework.authentication.TokenAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        # 'users.permissions.LimitUserDevices',
-        # 'users.permissions.DeactivateUserPermission',
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_PAGINATION_CLASS": "config.pagination.PageNumberPagination",
     "PAGE_SIZE": env("PAGE_SIZE"),
-    "DEFAULT_THROTTLE_CLASSES": ["config.throttling.FriendRequestRateThrottle"],
     "DEFAULT_THROTTLE_RATES": {
-        "friend_request": "3/min",
+        "friend_request_rate": "3/min",
     },
 }
 
@@ -273,7 +265,6 @@ DJOSER = {
     "PERMISSIONS": {
         "user": [
             "djoser.permissions.CurrentUserOrAdminOrReadOnly",
-            #  'users.permissions.LimitUserDevices',
         ]
     },
 }
@@ -369,10 +360,3 @@ sentry_sdk.init(
 )
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-
-# Supabase Credentials
-SUPABASE_CONFIG = {
-    "SUPABASE_URL": env("SUPABASE_URL"),
-    "SUPABASE_SERVICE_ROLE_KEY": env("SUPABASE_SERVICE_ROLE_KEY"),
-    "SUPABASE_JWT_SECRET": env("SUPABASE_JWT_SECRET"),
-}

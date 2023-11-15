@@ -3,7 +3,8 @@ from .serializers import (
     UserRegistrationSerializer,
     UserLoginSerializer,
     FriendRequestSerializer,
-    UserSerializer,
+    UserMinSerializer,
+    UserSearchSerializer,
 )
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -14,6 +15,8 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
 from .models import FriendRequest, User
+from django.db.models import Q
+from config.throttling import FriendRequestRateThrottle
 
 User = get_user_model()
 
@@ -30,11 +33,13 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def search(self, request):
-        keyword = request.query_params.get("search", "").lower()
+        keyword = request.query_params.get("query", "").lower()
         queryset = self.get_search_queryset(keyword)
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = self.get_serializer(page, many=True)
+            serializer = UserSearchSerializer(
+                page, many=True, context={"request": request}
+            )
             return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(queryset, many=True)
@@ -76,24 +81,43 @@ class FriendRequestViewSet(viewsets.ModelViewSet):
     serializer_class = FriendRequestSerializer
     permission_classes = [IsAuthenticated]
 
-    @action(detail=True, methods=["post"])
-    def send_request(self, request, pk=None):
-        receiver = User.objects.get(pk=pk)
-        friend_request, created = FriendRequest.objects.get_or_create(
-            sender=request.user, receiver=receiver, status="sent"
-        )
-        if created:
-            serializer = self.get_serializer(friend_request)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
+    @action(
+        detail=False,
+        methods=["post"],
+        throttle_classes=[FriendRequestRateThrottle],
+    )
+    def send_request(self, request):
+        pk = request.data.get("receiver")
+        receiver = User.objects.filter(pk=pk).first()
+        if not receiver:
             return Response(
-                {"detail": "Friend request already sent."},
+                {"detail": "User does not exist."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"detail": "Friend request sent."}, status=status.HTTP_201_CREATED
+        )
+
+    def create(self, request, *args, **kwargs):
+        return Response(
+            {"detail": "Method not allowed."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
     @action(detail=True, methods=["post"])
     def accept_request(self, request, pk=None):
         friend_request = FriendRequest.objects.get(pk=pk, receiver=request.user)
+        if friend_request.status != "sent":
+            return Response(
+                {
+                    "detail": f"This friend request has already been {friend_request.status}"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         friend_request.status = "accepted"
         friend_request.save()
         return Response({"status": "accepted"}, status=status.HTTP_200_OK)
@@ -101,6 +125,13 @@ class FriendRequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def reject_request(self, request, pk=None):
         friend_request = FriendRequest.objects.get(pk=pk, receiver=request.user)
+        if friend_request.status != "sent":
+            return Response(
+                {
+                    "detail": f"This friend request has already been {friend_request.status}"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         friend_request.status = "rejected"
         friend_request.save()
         return Response({"status": "rejected"}, status=status.HTTP_200_OK)
@@ -112,8 +143,9 @@ class FriendRequestViewSet(viewsets.ModelViewSet):
             Q(sent_requests__receiver=user, sent_requests__status="accepted")
             | Q(received_requests__sender=user, received_requests__status="accepted")
         ).distinct()
-        serializer = UserSerializer(friends, many=True)
-        return Response(serializer.data)
+        serializer = UserMinSerializer(friends, many=True)
+        page = self.paginate_queryset(serializer.data)
+        return self.get_paginated_response(page)
 
     @action(detail=False, methods=["get"])
     def list_pending_requests(self, request):
@@ -121,4 +153,5 @@ class FriendRequestViewSet(viewsets.ModelViewSet):
             receiver=request.user, status="sent"
         )
         serializer = FriendRequestSerializer(pending_requests, many=True)
-        return Response(serializer.data)
+        page = self.paginate_queryset(serializer.data)
+        return self.get_paginated_response(page)
