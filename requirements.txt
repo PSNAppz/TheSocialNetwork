@@ -127,8 +127,6 @@ South==1.0.2
 sqlparse==0.4.4
 storage3==0.5.4
 StrEnum==0.4.15
-supabase==1.0.4
-supafunc==0.2.3
 tablib==3.5.0
 typing_extensions==4.7.1
 tzdata==2023.3
