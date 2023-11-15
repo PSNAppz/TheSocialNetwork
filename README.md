@@ -2,6 +2,10 @@
 
 This is a Django REST Framework project implementing user authentication, friend request functionality, and custom throttling for certain endpoints.
 
+## Postman Collection
+
+[<img src="https://run.pstmn.io/button.svg" alt="Run In Postman" style="width: 128px; height: 32px;">](https://app.getpostman.com/run-collection/12298080-d0fb1fc3-e8a6-4e03-8970-e9ad198a877c?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D12298080-d0fb1fc3-e8a6-4e03-8970-e9ad198a877c%26entityType%3Dcollection%26workspaceId%3Db9068140-f88f-4d60-8b6c-3b1e4ac1a037)
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
