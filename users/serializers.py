@@ -23,7 +23,7 @@ class UserSearchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["uid", "display_name", "email", "is_friend"]
+        fields = ["display_name", "email", "is_friend"]
 
     def get_is_friend(self, obj):
         user = self.context["request"].user
